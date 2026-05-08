@@ -58,4 +58,5 @@ Chi tiết nằm trong [Pipeline.ipynb](Pipeline.ipynb):
 	```
 
 ## Tác giả
-Khánh Ho
+Dinox16
+## Github
