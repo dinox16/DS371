@@ -50,7 +50,7 @@ HAND_CONNECTIONS = [
 ]
 
 # 2. LOAD CÁC THÀNH PHẦN ĐÃ TRAIN
-DEVICE = torch.device('cpu') # Chạy trên Acer dùng CPU cho ổn định
+DEVICE = torch.device('cpu')
 CLASSES = ['Stop Sign', 'No gesture', 'Swiping Right', 'Swiping Left']
 
 kmeans = joblib.load('hand_pose_kmeans.pkl')
@@ -73,44 +73,36 @@ cooldown = 0 # Tránh nhận diện 1 hành động quá nhiều lần liên t�
 
 cap = cv2.VideoCapture(0)
 
-print("Hệ thống đã sẵn sàng! Đưa tay lên xem nào Khánh...")
+print("Hệ thống đã sẵn sàng")
 
 while cap.isOpened():
     success, img = cap.read()
     if not success: break
-    
-    img = cv2.flip(img, 1) # Lật ảnh như gương
+    img = cv2.flip(img, 1)
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=img_rgb)
     results = detector.detect(mp_image)
-    
     token = 32 # Mặc định là No Hand
     found_hand = False
-    
     if results.hand_landmarks:
         for hand_lms in results.hand_landmarks:
             found_hand = True
             draw_hand_landmarks(img, hand_lms, HAND_CONNECTIONS)
-            
             # Trích xuất & Chuẩn hóa tọa độ (Wrist làm gốc)
             coords = np.array([[lm.x, lm.y, lm.z] for lm in hand_lms])
             rel_coords = coords - coords[0]
             max_val = np.abs(rel_coords).max()
             if max_val > 0: rel_coords /= max_val
-            
             # K-means dự đoán ID tư thế
             token = kmeans.predict(rel_coords.flatten().reshape(1, -1))[0]
             break
-
     if not found_hand:
         recent_tokens.clear()
         stable_token = token
     else:
         recent_tokens.append(token)
         stable_token = Counter(recent_tokens).most_common(1)[0][0]
-            
     seq_buffer.append(stable_token)
-    
     # 4. DỰ ĐOÁN HÀNH ĐỘNG KHI ĐỦ 16 FRAMES
     if len(seq_buffer) == 16 and cooldown == 0:
         input_seq = torch.LongTensor([list(seq_buffer)]).to(DEVICE)
@@ -118,32 +110,26 @@ while cap.isOpened():
             output = model(input_seq)
             probs = torch.softmax(output, dim=1)
             confidence, prediction = torch.max(probs, dim=1)
-            
         if confidence.item() > 0.75: # Chỉ thực hiện nếu tin cậy trên 75%
             gesture = CLASSES[prediction.item()]
-            
             # --- LOGIC ĐIỀU KHIỂN THỰC TẾ ---
             if gesture == 'Swiping Right':
                 print("NEXT SLIDE")
                 pyautogui.press('right')
-                cooldown = 15 # Đợi 15 frames tiếp theo mới nhận diện tiếp
+                cooldown = 20 # Đợi 15 frames tiếp theo mới nhận diện tiếp
             elif gesture == 'Swiping Left':
                 print("PREVIOUS SLIDE")
                 pyautogui.press('left')
-                cooldown = 15
+                cooldown = 20
             elif gesture == 'Stop Sign':
                 print("PAUSE/STOP")
                 pyautogui.press('space') # Tạm dừng video/slide
                 cooldown = 20
-                
             cv2.putText(img, f"Gesture: {gesture}", (10, 50), 
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
     if cooldown > 0: cooldown -= 1
-    
     cv2.imshow("DA_DS371", img)
     if cv2.waitKey(1) & 0xFF == ord('q'): break
-
 cap.release()
 detector.close()
 cv2.destroyAllWindows()
