@@ -55,8 +55,12 @@ $$
 X = \begin{bmatrix}v_1 \\ v_2 \\ \vdots \\ v_n \end{bmatrix} 
 $$
 
- Từ đây ta suy ra được rằng số chiều của ma trận này là một ma trận có số chiều là $$ X \in \mathbb{R}^{63}$$
- Tiếp theo, chúng ta sẽ xây dựng một bộ từ điển cho mô hình LSTM. Với $ k = 32 $ với mỗi vector đặc trưng $v_i$ của một tư thế tay, thuật toán tính khoảng cách Euclid đến tất cả các tâm cụm: 
+ Từ đây ta suy ra được rằng số chiều của ma trận này là một ma trận có số chiều là 
+ $ 
+ X \in \mathbb{R}^{63} 
+ $
+ 
+ Tiếp theo, chúng ta sẽ xây dựng một bộ từ điển cho mô hình LSTM. Với $k = 32$ với mỗi vector đặc trưng $v_i$ của một tư thế tay, thuật toán tính khoảng cách Euclid đến tất cả các tâm cụm: 
  
  $$ 
  d(x_i, \mu_j) = \sqrt{\sum_{d=1}^{63} (x_{id} - \mu_{jd})^2} 
